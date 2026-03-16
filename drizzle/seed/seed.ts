@@ -1,8 +1,8 @@
 import * as dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
 import {
   surahs,
   verses,
@@ -15,8 +15,8 @@ import {
   tafsirs,
 } from "../../src/lib/db/schema";
 
-const sql = neon(process.env.DATABASE_URL!);
-const db = drizzle(sql);
+const client = postgres(process.env.DATABASE_URL!, { prepare: false });
+const db = drizzle(client);
 
 // ─── Surah Metadata (all 114) ────────────────────────────
 // Sourced from quran.com public data
@@ -244,8 +244,13 @@ async function seed() {
 }
 
 seed()
-  .then(() => process.exit(0))
-  .catch((err) => {
+  .then(async () => {
+    await client.end();
+    process.exit(0);
+  })
+  .catch(async (err) => {
     console.error("❌ Seed failed:", err);
+    await client.end();
     process.exit(1);
   });
+
